@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 1200px;
+            text-align: center;
+        }
+
+        .container h2 {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Employee Attendance and Performance Dashboard</h2>
+        <button id="login-btn">Login with Google</button>
+        <div id="dashboard" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Check-Ins</th>
+                        <th>Late Check-Ins</th>
+                        <th>Attendance %</th>
+                        <th>Sales Made</th>
+                        <th>Patients Talked To</th>
+                        <th>Patients Closed</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-table-body">
+                    <!-- Populated via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBvPYd8ksZLlfLWz2TUxk43ee9hZkMvxVU",
+            authDomain: "qrs-sales.firebaseapp.com",
+            projectId: "qrs-sales",
+            storageBucket: "qrs-sales.firebasestorage.app",
+            messagingSenderId: "839598049982",
+            appId: "1:839598049982:web:776f6a67e95c04f266ecef"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Google Sign-In provider
+        const provider = new GoogleAuthProvider();
+
+        // Handle Login
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    console.log('User signed in:', result.user);
+                    displayDashboard();
+                })
+                .catch((error) => {
+                    console.error('Error during sign-in:', error);
+                });
+        });
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, show the dashboard
+                displayDashboard();
+            } else {
+                // User is signed out
+                document.getElementById('dashboard').style.display = 'none';
+            }
+        });
+
+        // Display Dashboard
+        function displayDashboard() {
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            fetchAttendanceData();
+        }
+
+        // Fetch and display employee attendance and performance data
+        async function fetchAttendanceData() {
+            const tableBody = document.getElementById('attendance-table-body');
+            tableBody.innerHTML = '';
+
+            try {
+                const attendanceRef = collection(db, "attendance");
+                const querySnapshot = await getDocs(attendanceRef);
+
+                querySnapshot.forEach(async (employeeDoc) => {
+                    const employeeName = employeeDoc.id;
+                    const yearCollectionRef = collection(db, "attendance", employeeName, new Date().getFullYear().toString());
+                    const yearQuerySnapshot = await getDocs(yearCollectionRef);
+
+                    let checkInCount = 0;
+                    let lateCheckInCount = 0;
+                    let salesMade = 0; // Placeholder, fetch actual data from Firestore
+                    let patientsTalkedTo = 0; // Placeholder, fetch actual data from Firestore
+                    let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
+
+                    yearQuerySnapshot.forEach((doc) => {
+                        if (doc.data().type === 'check-in') {
+                            checkInCount++;
+                            if (doc.data().late) {
+                                lateCheckInCount++;
+                            }
+                        }
+                    });
+
+                    const attendancePercentage = ((checkInCount / TOTAL_WORKING_DAYS) * 100).toFixed(2);
+
+                    // Insert data into the table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${employeeName}</td>
+                        <td>${checkInCount}</td>
+                        <td>${lateCheckInCount}</td>
+                        <td>${attendancePercentage}%</td>
+                        <td>${salesMade}</td>
+                        <td>${patientsTalkedTo}</td>
+                        <td>${patientsClosed}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (e) {
+                console.error("Error fetching attendance data: ", e);
+            }
+        }
+
+        // Define TOTAL_WORKING_DAYS (for attendance percentage calculation)
+        const TOTAL_WORKING_DAYS = (() => {
+            const year = new Date().getFullYear();
+            let totalDays = 0;
+            for (let month = 0; month < 12; month++) {
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const currentDay = new Date(year, month, day).getDay();
+                    if (currentDay !== 0) { // Skip Sundays
+                        totalDays++;
+                    }
+                }
+            }
+            return totalDays;
+        })();
+    </script>
+</body>
+</html>

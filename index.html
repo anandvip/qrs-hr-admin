@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRS Attendance Dashboard</title>
+    <title>QRS Employee Dashboard</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -45,18 +45,15 @@
             margin-bottom: 2rem;
         }
 
-        .controls {
-            max-width: 500px;
-            margin: 0 auto 2rem;
-        }
-
         select {
             width: 100%;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            display: block;
             padding: 0.75rem;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             font-size: 1rem;
-            margin-bottom: 1rem;
         }
 
         button {
@@ -67,11 +64,15 @@
             font-weight: 500;
             cursor: pointer;
             transition: opacity 0.2s;
-            margin: 0 0.5rem;
         }
 
         button:hover:not(:disabled) {
             opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .btn-primary {
@@ -86,8 +87,8 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
@@ -107,24 +108,29 @@
 
         .stat-label {
             color: #64748b;
-            font-size: 0.875rem;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 2rem;
+            background: white;
         }
 
         th, td {
             padding: 1rem;
-            border: 1px solid #e2e8f0;
             text-align: left;
+            border: 1px solid #e2e8f0;
         }
 
         th {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+        }
+
+        tbody tr:nth-child(even) {
             background: #f8fafc;
-            font-weight: 600;
         }
 
         .alert {
@@ -139,73 +145,79 @@
         .loading {
             text-align: center;
             color: #64748b;
-            padding: 2rem;
+            padding: 1rem;
             display: none;
         }
 
-        .view {
-            display: none;
+        .performance-summary {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            text-align: center;
+            font-weight: 500;
         }
 
-        .view.active {
-            display: block;
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Login View -->
-        <div id="loginView" class="view active">
-            <h1>QRS Attendance Dashboard</h1>
-            <div class="auth-section">
-                <button onclick="login()" class="btn-primary">Login with Google</button>
-            </div>
+        <h1>Employee Attendance & Performance Dashboard</h1>
+        
+        <div id="alert" class="alert"></div>
+        <div id="loading" class="loading">Loading...</div>
+        
+        <div class="auth-section">
+            <button id="loginBtn" class="btn-primary">Login with Google</button>
+            <button id="logoutBtn" class="btn-secondary" style="display: none;">Logout</button>
         </div>
 
-        <!-- Dashboard View -->
-        <div id="dashboardView" class="view">
-            <div class="auth-section">
-                <button onclick="logout()" class="btn-secondary">Logout</button>
-            </div>
+        <select id="employeeSelect" style="display: none;">
+            <option value="">Select Employee</option>
+        </select>
 
-            <div id="dashboardAlert" class="alert"></div>
-            <div id="loading" class="loading">Loading...</div>
-
-            <div class="controls">
-                <select id="employeeSelect">
-                    <option value="">Select Employee</option>
-                </select>
-            </div>
-
-            <div id="statsSection" style="display: none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalCheckins">0</div>
-                        <div class="stat-label">Total Check-ins</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="attendanceRate">0%</div>
-                        <div class="stat-label">Attendance Rate</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="avgCheckInTime">--:--</div>
-                        <div class="stat-label">Average Check-in Time</div>
-                    </div>
+        <div id="dashboard" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="checkInCount">0</div>
+                    <div class="stat-label">Total Check-ins</div>
                 </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Check-in Time</th>
-                            <th>Check-out Time</th>
-                            <th>Duration</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceTable"></tbody>
-                </table>
+                <div class="stat-card">
+                    <div class="stat-value" id="lateCount">0</div>
+                    <div class="stat-label">Late Check-ins</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="attendanceRate">0%</div>
+                    <div class="stat-label">Attendance Rate</div>
+                </div>
             </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Check-ins</th>
+                        <th>Late Check-ins</th>
+                        <th>Attendance %</th>
+                        <th>Sales Made</th>
+                        <th>Patients Talked To</th>
+                        <th>Patients Closed</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTable"></tbody>
+            </table>
+
+            <div id="performanceSummary" class="performance-summary"></div>
         </div>
     </div>
 
@@ -213,18 +225,20 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js';
         import { 
             getAuth, 
-            signInWithPopup,
-            GoogleAuthProvider,
+            signInWithPopup, 
+            GoogleAuthProvider, 
             signOut,
             onAuthStateChanged 
         } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js';
         import { 
             getFirestore, 
             collection, 
-            query,
-            where,
+            doc,
+            getDoc,
             getDocs,
-            orderBy
+            query, 
+            where, 
+            orderBy 
         } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js';
 
         // Initialize Firebase
@@ -239,24 +253,35 @@
 
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const googleProvider = new GoogleAuthProvider();
 
-        // UI Functions
+        // UI Elements
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const employeeSelect = document.getElementById('employeeSelect');
+        const dashboard = document.getElementById('dashboard');
+
+        // Helper Functions
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
         function showAlert(message, type) {
-            const alert = document.getElementById('dashboardAlert');
+            const alert = document.getElementById('alert');
             alert.style.backgroundColor = type === 'success' ? '#16a34a' : '#dc2626';
             alert.textContent = message;
             alert.style.display = 'block';
             setTimeout(() => alert.style.display = 'none', 3000);
         }
 
-        function switchView(view) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(view + 'View').classList.add('active');
+        function calculateWorkingDays() {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), 1);
+            let days = 0;
+            while (start <= today) {
+                if (start.getDay() !== 0) days++; // Skip Sundays
+                start.setDate(start.getDate() + 1);
+            }
+            return days;
         }
 
         // Load Employees
@@ -267,16 +292,16 @@
                 const q = query(employeesRef, orderBy('fullName'));
                 const snapshot = await getDocs(q);
 
-                const select = document.getElementById('employeeSelect');
-                select.innerHTML = '<option value="">Select Employee</option>';
-
+                employeeSelect.innerHTML = '<option value="">Select Employee</option>';
                 snapshot.forEach(doc => {
-                    const employee = doc.data();
+                    const data = doc.data();
                     const option = document.createElement('option');
                     option.value = doc.id;
-                    option.textContent = `${employee.fullName} (${employee.empId})`;
-                    select.appendChild(option);
+                    option.textContent = `${data.fullName} (${data.empId || 'No ID'})`;
+                    employeeSelect.appendChild(option);
                 });
+                
+                employeeSelect.style.display = 'block';
             } catch (error) {
                 console.error('Error loading employees:', error);
                 showAlert('Failed to load employees', 'error');
@@ -285,12 +310,20 @@
             }
         }
 
-        // Load Attendance
-        async function loadAttendance(employeeId) {
+        // Load Employee Data
+        async function loadEmployeeData(employeeId) {
             try {
                 showLoading(true);
-                document.getElementById('statsSection').style.display = 'none';
+                dashboard.style.display = 'none';
 
+                // Get employee details
+                const employeeDoc = await getDoc(doc(db, 'employees', employeeId));
+                if (!employeeDoc.exists()) {
+                    throw new Error('Employee not found');
+                }
+                const employeeData = employeeDoc.data();
+
+                // Get attendance records
                 const attendanceRef = collection(db, 'attendance');
                 const q = query(
                     attendanceRef,
@@ -299,110 +332,110 @@
                 );
                 const snapshot = await getDocs(q);
 
-                let records = [];
+                // Calculate statistics
+                let stats = {
+                    checkIns: 0,
+                    lateCheckIns: 0,
+                    salesMade: 0,
+                    patientsTalkedTo: 0,
+                    patientsClosed: 0
+                };
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    records.push({
-                        ...data,
-                        id: doc.id,
-                        timestamp: data.timestamp.toDate()
-                    });
+                    if (data.type === 'check-in') {
+                        stats.checkIns++;
+                        if (new Date(data.timestamp.toDate()).getHours() >= 9) {
+                            stats.lateCheckIns++;
+                        }
+                    }
+                    stats.salesMade += data.salesMade || 0;
+                    stats.patientsTalkedTo += data.patientsTalkedTo || 0;
+                    stats.patientsClosed += data.patientsClosed || 0;
                 });
 
-                updateStats(records);
-                updateTable(records);
-                document.getElementById('statsSection').style.display = 'block';
+                // Update UI
+                updateDashboard(employeeData, stats);
+                dashboard.style.display = 'block';
 
             } catch (error) {
-                console.error('Error loading attendance:', error);
-                showAlert('Failed to load attendance records', 'error');
+                console.error('Error loading employee data:', error);
+                showAlert('Failed to load employee data', 'error');
             } finally {
                 showLoading(false);
             }
         }
 
-        function updateStats(records) {
-            const checkIns = records.filter(r => r.type === 'check-in');
-            
-            // Total Check-ins
-            document.getElementById('totalCheckins').textContent = checkIns.length;
+        function updateDashboard(employee, stats) {
+            const workingDays = calculateWorkingDays();
+            const attendanceRate = ((stats.checkIns / workingDays) * 100).toFixed(1);
 
-            // Attendance Rate
-            const workingDays = getWorkingDays();
-            const rate = (checkIns.length / workingDays * 100).toFixed(1);
-            document.getElementById('attendanceRate').textContent = rate + '%';
+            // Update statistics
+            document.getElementById('checkInCount').textContent = stats.checkIns;
+            document.getElementById('lateCount').textContent = stats.lateCheckIns;
+            document.getElementById('attendanceRate').textContent = `${attendanceRate}%`;
 
-            // Average Check-in Time
-            if (checkIns.length > 0) {
-                const avgTime = checkIns.reduce((acc, curr) => {
-                    return acc + curr.timestamp.getHours() * 60 + curr.timestamp.getMinutes();
-                }, 0) / checkIns.length;
+            // Update table
+            document.getElementById('employeeTable').innerHTML = `
+                <tr>
+                    <td>${employee.fullName}</td>
+                    <td>${stats.checkIns}</td>
+                    <td>${stats.lateCheckIns}</td>
+                    <td>${attendanceRate}%</td>
+                    <td>${stats.salesMade}</td>
+                    <td>${stats.patientsTalkedTo}</td>
+                    <td>${stats.patientsClosed}</td>
+                </tr>
+            `;
 
-                const hours = Math.floor(avgTime / 60);
-                const minutes = Math.floor(avgTime % 60);
-                document.getElementById('avgCheckInTime').textContent = 
-                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            }
-        }
-
-        function updateTable(records) {
-            const tbody = document.getElementById('attendanceTable');
-            tbody.innerHTML = '';
-
-            let checkInRecord = null;
-            records.forEach(record => {
-                if (record.type === 'check-in') {
-                    checkInRecord = record;
-                } else if (record.type === 'check-out' && checkInRecord) {
-                    const duration = (record.timestamp - checkInRecord.timestamp) / (1000 * 60 * 60);
-                    
-                    const row = tbody.insertRow();
-                    row.innerHTML = `
-                        <td>${checkInRecord.timestamp.toLocaleDateString()}</td>
-                        <td>${checkInRecord.timestamp.toLocaleTimeString()}</td>
-                        <td>${record.timestamp.toLocaleTimeString()}</td>
-                        <td>${duration.toFixed(2)} hours</td>
-                        <td>${checkInRecord.timestamp.getHours() >= 9 ? 'Late' : 'On Time'}</td>
-                    `;
-                    
-                    checkInRecord = null;
-                }
-            });
-        }
-
-        function getWorkingDays() {
-            const today = new Date();
-            const start = new Date(today.getFullYear(), today.getMonth(), 1);
-            let days = 0;
-
-            while (start <= today) {
-                if (start.getDay() !== 0) days++; // Skip Sundays
-                start.setDate(start.getDate() + 1);
-            }
-
-            return days;
+            // Update summary
+            document.getElementById('performanceSummary').innerHTML = `
+                ${employee.fullName}'s Performance Summary<br>
+                Attendance Rate: ${attendanceRate}% | 
+                Total Check-ins: ${stats.checkIns} | 
+                Late Check-ins: ${stats.lateCheckIns}
+            `;
         }
 
         // Event Listeners
-        document.getElementById('employeeSelect').addEventListener('change', (e) => {
-            if (e.target.value) {
-                loadAttendance(e.target.value);
-            } else {
-                document.getElementById('statsSection').style.display = 'none';
+        loginBtn.addEventListener('click', async () => {
+            try {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Login failed', 'error');
             }
         });
 
-        // Auth Functions
-        window.login = () => signInWithPopup(auth, googleProvider);
-        window.logout = () => signOut(auth);
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error('Logout error:', error);
+                showAlert('Logout failed', 'error');
+            }
+        });
+
+        employeeSelect.addEventListener('change', () => {
+            const selectedId = employeeSelect.value;
+            if (selectedId) {
+                loadEmployeeData(selectedId);
+            } else {
+                dashboard.style.display = 'none';
+            }
+        });
 
         // Auth State Observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                switchView('dashboard');
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'inline-block';
                 loadEmployees();
             } else {
-                switchView('login');
+                loginBtn.style.display = 'inline-block';
+                logoutBtn.style.display = 'none';
+                employeeSelect.style.display = 'none';
+                dashboard.style.display = 'none';
             }
         });
     </script>

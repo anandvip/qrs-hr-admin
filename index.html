@@ -76,6 +76,7 @@
     <div class="container">
         <h2>Employee Attendance and Performance Dashboard</h2>
         <button id="login-btn">Login with Google</button>
+        <button id="logout-btn" style="display: none;">Logout</button>
         <div id="dashboard" style="display: none;">
             <select id="employee-select" onchange="fetchAttendanceData()">
                 <option value="">Select an Employee</option>
@@ -104,8 +105,8 @@
     <script type="module">
         // Import Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
         // Firebase configuration
         const firebaseConfig = {
@@ -137,6 +138,18 @@
                 });
         });
 
+        // Handle Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth)
+                .then(() => {
+                    console.log('User signed out');
+                    hideDashboard();
+                })
+                .catch((error) => {
+                    console.error('Error during sign-out:', error);
+                });
+        });
+
         // Listen for auth state changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -144,15 +157,23 @@
                 displayDashboard();
             } else {
                 // User is signed out
-                document.getElementById('dashboard').style.display = 'none';
+                hideDashboard();
             }
         });
 
         // Display Dashboard
         function displayDashboard() {
             document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'block';
             document.getElementById('dashboard').style.display = 'block';
             fetchEmployeeList();
+        }
+
+        // Hide Dashboard
+        function hideDashboard() {
+            document.getElementById('login-btn').style.display = 'block';
+            document.getElementById('logout-btn').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
         }
 
         // Fetch and populate employee list in select dropdown
@@ -160,18 +181,18 @@
             const employeeSelect = document.getElementById('employee-select');
             employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
             try {
-                const attendanceRef = collection(db, "attendance");
-                const querySnapshot = await getDocs(attendanceRef);
+                const employeesCollectionRef = collection(db, "employees");
+                const querySnapshot = await getDocs(employeesCollectionRef);
 
                 if (querySnapshot.empty) {
-                    console.warn("No employee records found in the attendance collection.");
+                    console.warn("No employee records found in the employees collection.");
                 }
 
                 querySnapshot.forEach((employeeDoc) => {
                     console.log("Adding employee to dropdown:", employeeDoc.id);
                     const option = document.createElement('option');
                     option.value = employeeDoc.id;
-                    option.textContent = employeeDoc.id;
+                    option.textContent = employeeDoc.data().name;
                     employeeSelect.appendChild(option);
                 });
             } catch (e) {
@@ -191,11 +212,11 @@
             if (!selectedEmployee) return;
 
             try {
-                const yearCollectionRef = collection(db, "attendance", selectedEmployee, new Date().getFullYear().toString());
-                const yearQuerySnapshot = await getDocs(yearCollectionRef);
+                const attendanceRef = collection(db, "employees", selectedEmployee, "attendance");
+                const querySnapshot = await getDocs(attendanceRef);
 
-                if (yearQuerySnapshot.empty) {
-                    console.warn(`No attendance records found for ${selectedEmployee} in the current year.`);
+                if (querySnapshot.empty) {
+                    console.warn(`No attendance records found for ${selectedEmployee}.`);
                 }
 
                 let checkInCount = 0;
@@ -204,7 +225,7 @@
                 let patientsTalkedTo = 0; // Placeholder, fetch actual data from Firestore
                 let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
 
-                yearQuerySnapshot.forEach((doc) => {
+                querySnapshot.forEach((doc) => {
                     console.log("Attendance document data:", doc.data());
                     if (doc.data().type === 'check-in') {
                         checkInCount++;

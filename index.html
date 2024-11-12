@@ -182,11 +182,11 @@
             employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
             try {
                 console.log("Fetching employees from Firestore...");
-                const employeesCollectionRef = collection(db, "employees");
-                const querySnapshot = await getDocs(employeesCollectionRef);
+                const attendanceCollectionRef = collection(db, "attendance");
+                const querySnapshot = await getDocs(attendanceCollectionRef);
 
                 if (querySnapshot.empty) {
-                    console.warn("No employee records found in the employees collection.");
+                    console.warn("No employee records found in the attendance collection.");
                     return;
                 }
 
@@ -196,7 +196,7 @@
                         const employeeData = employeeDoc.data();
                         const option = document.createElement('option');
                         option.value = employeeDoc.id;
-                        option.textContent = employeeData.name ? employeeData.name : employeeDoc.id; // Fallback to ID if name doesn't exist
+                        option.textContent = employeeDoc.id; // Use employee document ID as the name
                         employeeSelect.appendChild(option);
                     } else {
                         console.warn(`Employee document ${employeeDoc.id} does not exist.`);
@@ -219,7 +219,8 @@
             if (!selectedEmployee) return;
 
             try {
-                const attendanceRef = collection(db, "employees", selectedEmployee, "attendance");
+                const year = new Date().getFullYear().toString();
+                const attendanceRef = collection(db, "attendance", selectedEmployee, year);
                 const querySnapshot = await getDocs(attendanceRef);
 
                 if (querySnapshot.empty) {

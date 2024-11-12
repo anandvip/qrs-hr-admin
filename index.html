@@ -32,6 +32,15 @@
             margin-bottom: 20px;
         }
 
+        .debug-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            display: none;
+        }
+
         select {
             padding: 10px;
             margin-bottom: 20px;
@@ -71,6 +80,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            margin: 0 5px;
         }
 
         button:hover {
@@ -90,6 +100,9 @@
             color: #dc3545;
             text-align: center;
             margin: 10px 0;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -99,7 +112,10 @@
         <div class="auth-buttons">
             <button id="login-btn">Login with Google</button>
             <button id="logout-btn" style="display: none;">Logout</button>
+            <button id="toggle-debug" style="background-color: #6c757d;">Toggle Debug Info</button>
         </div>
+        <div id="debug-info" class="debug-info"></div>
+        <div id="error-message" class="error-message" style="display: none;"></div>
         <div id="dashboard" style="display: none;">
             <select id="employee-select">
                 <option value="">Select an Employee</option>
@@ -125,7 +141,7 @@
     <script type="module">
         // Import Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where, collectionGroup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
         // Firebase configuration
@@ -151,60 +167,111 @@
         const employeeSelect = document.getElementById('employee-select');
         const tableBody = document.getElementById('attendance-table-body');
         const performanceSummary = document.getElementById('performance-summary');
+        const debugInfo = document.getElementById('debug-info');
+        const errorMessage = document.getElementById('error-message');
+        const toggleDebugBtn = document.getElementById('toggle-debug');
 
-        // Auth Event Listeners
-        loginBtn.addEventListener('click', () => {
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    console.log('User signed in:', result.user.email);
-                })
-                .catch((error) => {
-                    console.error('Sign-in error:', error);
-                    alert('Failed to sign in. Please try again.');
-                });
+        // Debug logging function
+        function logDebug(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logMessage = `${timestamp}: ${message}`;
+            console.log(logMessage, data);
+            debugInfo.innerHTML += `<div>${logMessage}${data ? ': ' + JSON.stringify(data) : ''}</div>`;
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Toggle debug info
+        toggleDebugBtn.addEventListener('click', () => {
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
         });
 
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth)
-                .then(() => console.log('User signed out'))
-                .catch((error) => console.error('Sign-out error:', error));
+        // Auth Event Listeners
+        loginBtn.addEventListener('click', async () => {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                logDebug('User signed in', { email: result.user.email });
+            } catch (error) {
+                logDebug('Sign-in error', error);
+                showError('Failed to sign in. Please try again.');
+            }
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                logDebug('User signed out');
+            } catch (error) {
+                logDebug('Sign-out error', error);
+                showError('Failed to sign out. Please try again.');
+            }
         });
 
         // Auth State Observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                logDebug('Auth state changed: User signed in', { email: user.email });
                 loginBtn.style.display = 'none';
                 logoutBtn.style.display = 'inline-block';
                 dashboard.style.display = 'block';
                 fetchEmployeeList();
             } else {
+                logDebug('Auth state changed: User signed out');
                 loginBtn.style.display = 'inline-block';
                 logoutBtn.style.display = 'none';
                 dashboard.style.display = 'none';
-                employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
-                tableBody.innerHTML = '';
-                performanceSummary.innerHTML = '';
+                resetDashboard();
             }
         });
+
+        // Reset dashboard
+        function resetDashboard() {
+            employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
+            tableBody.innerHTML = '';
+            performanceSummary.innerHTML = '';
+        }
 
         // Fetch Employee List
         async function fetchEmployeeList() {
             try {
-                const attendanceRef = collection(db, 'attendance');
-                const querySnapshot = await getDocs(attendanceRef);
+                logDebug('Fetching employee list...');
                 
+                // Try to get all documents in the attendance collection
+                const attendanceRef = collection(db, 'attendance');
+                logDebug('Created attendance collection reference');
+                
+                const querySnapshot = await getDocs(attendanceRef);
+                logDebug('Got query snapshot', { empty: querySnapshot.empty, size: querySnapshot.size });
+
+                if (querySnapshot.empty) {
+                    logDebug('No employees found in attendance collection');
+                    showError('No employee records found. Please check database permissions.');
+                    return;
+                }
+
+                // Reset select element
                 employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
                 
-                querySnapshot.forEach((doc) => {
-                    // Each doc.id is an employee name (Arvind, Geet, etc.)
+                // Add each employee to the select dropdown
+                querySnapshot.forEach(doc => {
+                    logDebug('Processing employee document', { id: doc.id });
                     const option = document.createElement('option');
                     option.value = doc.id;
                     option.textContent = doc.id;
                     employeeSelect.appendChild(option);
                 });
+
+                logDebug('Successfully populated employee list');
             } catch (error) {
-                console.error('Error fetching employee list:', error);
-                alert('Failed to fetch employee list. Please try again.');
+                logDebug('Error fetching employee list', error);
+                showError(`Failed to fetch employee list: ${error.message}`);
             }
         }
 
@@ -212,12 +279,12 @@
         employeeSelect.addEventListener('change', async () => {
             const selectedEmployee = employeeSelect.value;
             if (!selectedEmployee) {
-                tableBody.innerHTML = '';
-                performanceSummary.innerHTML = '';
+                resetDashboard();
                 return;
             }
             
             try {
+                logDebug('Fetching attendance data', { employee: selectedEmployee });
                 const year = new Date().getFullYear().toString();
                 const employeeYearRef = collection(db, 'attendance', selectedEmployee, year);
                 const querySnapshot = await getDocs(employeeYearRef);
@@ -230,48 +297,63 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
+                    logDebug('Processing attendance record', { id: doc.id, data });
+                    
                     if (data.type === 'check-in') {
                         checkInCount++;
                         if (data.late) {
                             lateCheckInCount++;
                         }
                     }
-                    // Add additional metrics when available in your database
                     if (data.salesMade) salesMade += data.salesMade;
                     if (data.patientsTalkedTo) patientsTalkedTo += data.patientsTalkedTo;
                     if (data.patientsClosed) patientsClosed += data.patientsClosed;
                 });
 
-                const workingDays = calculateWorkingDays();
-                const attendancePercentage = ((checkInCount / workingDays) * 100).toFixed(2);
+                updateDashboard(selectedEmployee, {
+                    checkInCount,
+                    lateCheckInCount,
+                    salesMade,
+                    patientsTalkedTo,
+                    patientsClosed
+                });
 
-                // Update table
-                tableBody.innerHTML = `
-                    <tr>
-                        <td>${selectedEmployee}</td>
-                        <td>${checkInCount}</td>
-                        <td>${lateCheckInCount}</td>
-                        <td>${attendancePercentage}%</td>
-                        <td>${salesMade}</td>
-                        <td>${patientsTalkedTo}</td>
-                        <td>${patientsClosed}</td>
-                    </tr>
-                `;
-
-                // Update performance summary
-                performanceSummary.innerHTML = `
-                    ${selectedEmployee}'s Performance Summary:<br>
-                    Attendance Rate: ${attendancePercentage}% | 
-                    Total Check-ins: ${checkInCount} | 
-                    Late Check-ins: ${lateCheckInCount}
-                `;
             } catch (error) {
-                console.error('Error fetching attendance data:', error);
-                alert('Failed to fetch attendance data. Please try again.');
+                logDebug('Error fetching attendance data', error);
+                showError(`Failed to fetch attendance data: ${error.message}`);
             }
         });
 
-        // Calculate total working days
+        // Update Dashboard
+        function updateDashboard(employee, stats) {
+            const workingDays = calculateWorkingDays();
+            const attendancePercentage = ((stats.checkInCount / workingDays) * 100).toFixed(2);
+
+            // Update table
+            tableBody.innerHTML = `
+                <tr>
+                    <td>${employee}</td>
+                    <td>${stats.checkInCount}</td>
+                    <td>${stats.lateCheckInCount}</td>
+                    <td>${attendancePercentage}%</td>
+                    <td>${stats.salesMade}</td>
+                    <td>${stats.patientsTalkedTo}</td>
+                    <td>${stats.patientsClosed}</td>
+                </tr>
+            `;
+
+            // Update performance summary
+            performanceSummary.innerHTML = `
+                ${employee}'s Performance Summary:<br>
+                Attendance Rate: ${attendancePercentage}% | 
+                Total Check-ins: ${stats.checkInCount} | 
+                Late Check-ins: ${stats.lateCheckInCount}
+            `;
+
+            logDebug('Dashboard updated', { employee, stats });
+        }
+
+        // Calculate working days
         function calculateWorkingDays() {
             const year = new Date().getFullYear();
             const month = new Date().getMonth();

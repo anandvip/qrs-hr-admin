@@ -181,28 +181,29 @@
             const employeeSelect = document.getElementById('employee-select');
             employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
             try {
-                console.log("Fetching employees from Firestore...");
+                console.log("Step 1: Fetching employees from Firestore...");
                 const attendanceCollectionRef = collection(db, "attendance");
                 const querySnapshot = await getDocs(attendanceCollectionRef);
 
                 if (querySnapshot.empty) {
-                    console.warn("No employee records found in the attendance collection.");
+                    console.warn("Step 2: No employee records found in the attendance collection.");
                     return;
                 }
 
                 querySnapshot.forEach((employeeDoc) => {
-                    console.log("Adding employee to dropdown:", employeeDoc.id);
+                    console.log("Step 3: Processing employee document:", employeeDoc.id);
                     if (employeeDoc.exists()) {
+                        console.log("Step 4: Employee document exists, adding to dropdown:", employeeDoc.id);
                         const option = document.createElement('option');
                         option.value = employeeDoc.id;
                         option.textContent = employeeDoc.id; // Use employee document ID as the name
                         employeeSelect.appendChild(option);
                     } else {
-                        console.warn(`Employee document ${employeeDoc.id} does not exist.`);
+                        console.warn(`Step 5: Employee document ${employeeDoc.id} does not exist.`);
                     }
                 });
             } catch (e) {
-                console.error("Error fetching employee list: ", e);
+                console.error("Step 6: Error fetching employee list: ", e);
             }
         }
 
@@ -218,12 +219,13 @@
             if (!selectedEmployee) return;
 
             try {
-                const year = new Date().getFullYear().toString();
-                const attendanceRef = collection(db, "attendance", selectedEmployee, "2024");
+                console.log(`Step 7: Fetching attendance data for employee: ${selectedEmployee}`);
+                const year = "2024";
+                const attendanceRef = collection(db, "attendance", selectedEmployee, year);
                 const querySnapshot = await getDocs(attendanceRef);
 
                 if (querySnapshot.empty) {
-                    console.warn(`No attendance records found for ${selectedEmployee}.`);
+                    console.warn(`Step 8: No attendance records found for ${selectedEmployee}.`);
                 }
 
                 let checkInCount = 0;
@@ -233,7 +235,7 @@
                 let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
 
                 querySnapshot.forEach((doc) => {
-                    console.log("Attendance document data:", doc.data());
+                    console.log("Step 9: Processing attendance document data:", doc.data());
                     if (doc.data().type === 'check-in') {
                         checkInCount++;
                         if (doc.data().late) {
@@ -245,6 +247,7 @@
                 const attendancePercentage = ((checkInCount / TOTAL_WORKING_DAYS) * 100).toFixed(2);
 
                 // Insert data into the table
+                console.log(`Step 10: Inserting data into the table for ${selectedEmployee}`);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${selectedEmployee}</td>
@@ -258,9 +261,10 @@
                 tableBody.appendChild(row);
 
                 // Generate performance summary
+                console.log(`Step 11: Generating performance summary for ${selectedEmployee}`);
                 performanceSummary.innerHTML = `${selectedEmployee} has an attendance percentage of ${attendancePercentage}%. Late Check-Ins: ${lateCheckInCount}. Keep an eye on punctuality and aim for improvement.`;
             } catch (e) {
-                console.error("Error fetching attendance data: ", e);
+                console.error("Step 12: Error fetching attendance data: ", e);
             }
         }
 

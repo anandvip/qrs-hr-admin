@@ -163,7 +163,12 @@
                 const attendanceRef = collection(db, "attendance");
                 const querySnapshot = await getDocs(attendanceRef);
 
+                if (querySnapshot.empty) {
+                    console.warn("No employee records found in the attendance collection.");
+                }
+
                 querySnapshot.forEach((employeeDoc) => {
+                    console.log("Adding employee to dropdown:", employeeDoc.id);
                     const option = document.createElement('option');
                     option.value = employeeDoc.id;
                     option.textContent = employeeDoc.id;
@@ -189,6 +194,10 @@
                 const yearCollectionRef = collection(db, "attendance", selectedEmployee, new Date().getFullYear().toString());
                 const yearQuerySnapshot = await getDocs(yearCollectionRef);
 
+                if (yearQuerySnapshot.empty) {
+                    console.warn(`No attendance records found for ${selectedEmployee} in the current year.`);
+                }
+
                 let checkInCount = 0;
                 let lateCheckInCount = 0;
                 let salesMade = 0; // Placeholder, fetch actual data from Firestore
@@ -196,6 +205,7 @@
                 let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
 
                 yearQuerySnapshot.forEach((doc) => {
+                    console.log("Attendance document data:", doc.data());
                     if (doc.data().type === 'check-in') {
                         checkInCount++;
                         if (doc.data().late) {

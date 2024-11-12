@@ -181,19 +181,26 @@
             const employeeSelect = document.getElementById('employee-select');
             employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
             try {
+                console.log("Fetching employees from Firestore...");
                 const employeesCollectionRef = collection(db, "employees");
                 const querySnapshot = await getDocs(employeesCollectionRef);
 
                 if (querySnapshot.empty) {
                     console.warn("No employee records found in the employees collection.");
+                    return;
                 }
 
                 querySnapshot.forEach((employeeDoc) => {
                     console.log("Adding employee to dropdown:", employeeDoc.id);
-                    const option = document.createElement('option');
-                    option.value = employeeDoc.id;
-                    option.textContent = employeeDoc.data().name;
-                    employeeSelect.appendChild(option);
+                    if (employeeDoc.exists()) {
+                        const employeeData = employeeDoc.data();
+                        const option = document.createElement('option');
+                        option.value = employeeDoc.id;
+                        option.textContent = employeeData.name ? employeeData.name : employeeDoc.id; // Fallback to ID if name doesn't exist
+                        employeeSelect.appendChild(option);
+                    } else {
+                        console.warn(`Employee document ${employeeDoc.id} does not exist.`);
+                    }
                 });
             } catch (e) {
                 console.error("Error fetching employee list: ", e);

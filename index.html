@@ -193,7 +193,6 @@
                 querySnapshot.forEach((employeeDoc) => {
                     console.log("Adding employee to dropdown:", employeeDoc.id);
                     if (employeeDoc.exists()) {
-                        const employeeData = employeeDoc.data();
                         const option = document.createElement('option');
                         option.value = employeeDoc.id;
                         option.textContent = employeeDoc.id; // Use employee document ID as the name
@@ -220,7 +219,7 @@
 
             try {
                 const year = new Date().getFullYear().toString();
-                const attendanceRef = collection(db, "attendance", selectedEmployee, year);
+                const attendanceRef = collection(db, "attendance", selectedEmployee, "2024");
                 const querySnapshot = await getDocs(attendanceRef);
 
                 if (querySnapshot.empty) {

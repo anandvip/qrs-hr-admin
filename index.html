@@ -3,376 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Attendance Dashboard</title>
+    <title>QRS Attendance Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --background: #f1f5f9;
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: var(--background);
+            line-height: 1.6;
             padding: 20px;
         }
 
         .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             max-width: 1200px;
             margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 2rem;
         }
 
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
+        h1 {
             text-align: center;
+            color: #1e293b;
+            margin-bottom: 2rem;
         }
 
-        .auth-buttons {
+        .auth-section {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 2rem;
         }
 
-        .debug-info {
-            background-color: #f8f9fa;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-            font-family: monospace;
-            display: none;
+        .controls {
+            max-width: 500px;
+            margin: 0 auto 2rem;
         }
 
         select {
-            padding: 10px;
-            margin-bottom: 20px;
             width: 100%;
-            max-width: 400px;
-            display: block;
-            margin: 0 auto 20px;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin: 0 0.5rem;
+        }
+
+        button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            background-color: white;
+            margin-top: 2rem;
         }
 
         th, td {
-            padding: 12px;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
             text-align: left;
-            border: 1px solid #ddd;
         }
 
         th {
-            background-color: #007BFF;
+            background: #f8fafc;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
             color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-
-        button {
-            background-color: #007BFF;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 0 5px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        #performance-summary {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 5px;
             text-align: center;
-            font-weight: bold;
+            display: none;
         }
 
-        .error-message {
-            color: #dc3545;
+        .loading {
             text-align: center;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #f8d7da;
-            border-radius: 4px;
+            color: #64748b;
+            padding: 2rem;
+            display: none;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Employee Attendance and Performance Dashboard</h2>
-        <div class="auth-buttons">
-            <button id="login-btn">Login with Google</button>
-            <button id="logout-btn" style="display: none;">Logout</button>
-            <button id="toggle-debug" style="background-color: #6c757d;">Toggle Debug Info</button>
+        <!-- Login View -->
+        <div id="loginView" class="view active">
+            <h1>QRS Attendance Dashboard</h1>
+            <div class="auth-section">
+                <button onclick="login()" class="btn-primary">Login with Google</button>
+            </div>
         </div>
-        <div id="debug-info" class="debug-info"></div>
-        <div id="error-message" class="error-message" style="display: none;"></div>
-        <div id="dashboard" style="display: none;">
-            <select id="employee-select">
-                <option value="">Select an Employee</option>
-            </select>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Employee Name</th>
-                        <th>Check-Ins</th>
-                        <th>Late Check-Ins</th>
-                        <th>Attendance %</th>
-                        <th>Sales Made</th>
-                        <th>Patients Talked To</th>
-                        <th>Patients Closed</th>
-                    </tr>
-                </thead>
-                <tbody id="attendance-table-body"></tbody>
-            </table>
-            <div id="performance-summary"></div>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view">
+            <div class="auth-section">
+                <button onclick="logout()" class="btn-secondary">Logout</button>
+            </div>
+
+            <div id="dashboardAlert" class="alert"></div>
+            <div id="loading" class="loading">Loading...</div>
+
+            <div class="controls">
+                <select id="employeeSelect">
+                    <option value="">Select Employee</option>
+                </select>
+            </div>
+
+            <div id="statsSection" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCheckins">0</div>
+                        <div class="stat-label">Total Check-ins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="attendanceRate">0%</div>
+                        <div class="stat-label">Attendance Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgCheckInTime">--:--</div>
+                        <div class="stat-label">Average Check-in Time</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Check-in Time</th>
+                            <th>Check-out Time</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script type="module">
-        // Import Firebase SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where, collectionGroup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js';
+        import { 
+            getAuth, 
+            signInWithPopup,
+            GoogleAuthProvider,
+            signOut,
+            onAuthStateChanged 
+        } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js';
+        import { 
+            getFirestore, 
+            collection, 
+            query,
+            where,
+            getDocs,
+            orderBy
+        } from 'https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js';
 
-        // Firebase configuration
-        const firebaseConfig = {
+        // Initialize Firebase
+        const app = initializeApp({
             apiKey: "AIzaSyBvPYd8ksZLlfLWz2TUxk43ee9hZkMvxVU",
             authDomain: "qrs-sales.firebaseapp.com",
             projectId: "qrs-sales",
             storageBucket: "qrs-sales.firebasestorage.app",
             messagingSenderId: "839598049982",
             appId: "1:839598049982:web:776f6a67e95c04f266ecef"
-        };
+        });
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
 
-        // DOM Elements
-        const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const dashboard = document.getElementById('dashboard');
-        const employeeSelect = document.getElementById('employee-select');
-        const tableBody = document.getElementById('attendance-table-body');
-        const performanceSummary = document.getElementById('performance-summary');
-        const debugInfo = document.getElementById('debug-info');
-        const errorMessage = document.getElementById('error-message');
-        const toggleDebugBtn = document.getElementById('toggle-debug');
-
-        // Debug logging function
-        function logDebug(message, data = null) {
-            const timestamp = new Date().toISOString();
-            const logMessage = `${timestamp}: ${message}`;
-            console.log(logMessage, data);
-            debugInfo.innerHTML += `<div>${logMessage}${data ? ': ' + JSON.stringify(data) : ''}</div>`;
+        // UI Functions
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // Show error message
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 5000);
+        function showAlert(message, type) {
+            const alert = document.getElementById('dashboardAlert');
+            alert.style.backgroundColor = type === 'success' ? '#16a34a' : '#dc2626';
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 3000);
         }
 
-        // Toggle debug info
-        toggleDebugBtn.addEventListener('click', () => {
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-        });
+        function switchView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(view + 'View').classList.add('active');
+        }
 
-        // Auth Event Listeners
-        loginBtn.addEventListener('click', async () => {
+        // Load Employees
+        async function loadEmployees() {
             try {
-                const result = await signInWithPopup(auth, provider);
-                logDebug('User signed in', { email: result.user.email });
+                showLoading(true);
+                const employeesRef = collection(db, 'employees');
+                const q = query(employeesRef, orderBy('fullName'));
+                const snapshot = await getDocs(q);
+
+                const select = document.getElementById('employeeSelect');
+                select.innerHTML = '<option value="">Select Employee</option>';
+
+                snapshot.forEach(doc => {
+                    const employee = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = `${employee.fullName} (${employee.empId})`;
+                    select.appendChild(option);
+                });
             } catch (error) {
-                logDebug('Sign-in error', error);
-                showError('Failed to sign in. Please try again.');
+                console.error('Error loading employees:', error);
+                showAlert('Failed to load employees', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load Attendance
+        async function loadAttendance(employeeId) {
+            try {
+                showLoading(true);
+                document.getElementById('statsSection').style.display = 'none';
+
+                const attendanceRef = collection(db, 'attendance');
+                const q = query(
+                    attendanceRef,
+                    where('employeeId', '==', employeeId),
+                    orderBy('timestamp', 'desc')
+                );
+                const snapshot = await getDocs(q);
+
+                let records = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    records.push({
+                        ...data,
+                        id: doc.id,
+                        timestamp: data.timestamp.toDate()
+                    });
+                });
+
+                updateStats(records);
+                updateTable(records);
+                document.getElementById('statsSection').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+                showAlert('Failed to load attendance records', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function updateStats(records) {
+            const checkIns = records.filter(r => r.type === 'check-in');
+            
+            // Total Check-ins
+            document.getElementById('totalCheckins').textContent = checkIns.length;
+
+            // Attendance Rate
+            const workingDays = getWorkingDays();
+            const rate = (checkIns.length / workingDays * 100).toFixed(1);
+            document.getElementById('attendanceRate').textContent = rate + '%';
+
+            // Average Check-in Time
+            if (checkIns.length > 0) {
+                const avgTime = checkIns.reduce((acc, curr) => {
+                    return acc + curr.timestamp.getHours() * 60 + curr.timestamp.getMinutes();
+                }, 0) / checkIns.length;
+
+                const hours = Math.floor(avgTime / 60);
+                const minutes = Math.floor(avgTime % 60);
+                document.getElementById('avgCheckInTime').textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+        }
+
+        function updateTable(records) {
+            const tbody = document.getElementById('attendanceTable');
+            tbody.innerHTML = '';
+
+            let checkInRecord = null;
+            records.forEach(record => {
+                if (record.type === 'check-in') {
+                    checkInRecord = record;
+                } else if (record.type === 'check-out' && checkInRecord) {
+                    const duration = (record.timestamp - checkInRecord.timestamp) / (1000 * 60 * 60);
+                    
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${checkInRecord.timestamp.toLocaleDateString()}</td>
+                        <td>${checkInRecord.timestamp.toLocaleTimeString()}</td>
+                        <td>${record.timestamp.toLocaleTimeString()}</td>
+                        <td>${duration.toFixed(2)} hours</td>
+                        <td>${checkInRecord.timestamp.getHours() >= 9 ? 'Late' : 'On Time'}</td>
+                    `;
+                    
+                    checkInRecord = null;
+                }
+            });
+        }
+
+        function getWorkingDays() {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), 1);
+            let days = 0;
+
+            while (start <= today) {
+                if (start.getDay() !== 0) days++; // Skip Sundays
+                start.setDate(start.getDate() + 1);
+            }
+
+            return days;
+        }
+
+        // Event Listeners
+        document.getElementById('employeeSelect').addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadAttendance(e.target.value);
+            } else {
+                document.getElementById('statsSection').style.display = 'none';
             }
         });
 
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                logDebug('User signed out');
-            } catch (error) {
-                logDebug('Sign-out error', error);
-                showError('Failed to sign out. Please try again.');
-            }
-        });
+        // Auth Functions
+        window.login = () => signInWithPopup(auth, googleProvider);
+        window.logout = () => signOut(auth);
 
         // Auth State Observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                logDebug('Auth state changed: User signed in', { email: user.email });
-                loginBtn.style.display = 'none';
-                logoutBtn.style.display = 'inline-block';
-                dashboard.style.display = 'block';
-                fetchEmployeeList();
+                switchView('dashboard');
+                loadEmployees();
             } else {
-                logDebug('Auth state changed: User signed out');
-                loginBtn.style.display = 'inline-block';
-                logoutBtn.style.display = 'none';
-                dashboard.style.display = 'none';
-                resetDashboard();
+                switchView('login');
             }
         });
-
-        // Reset dashboard
-        function resetDashboard() {
-            employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
-            tableBody.innerHTML = '';
-            performanceSummary.innerHTML = '';
-        }
-
-        // Fetch Employee List
-        async function fetchEmployeeList() {
-            try {
-                logDebug('Fetching employee list...');
-                
-                // Try to get all documents in the attendance collection
-                const attendanceRef = collection(db, 'attendance');
-                logDebug('Created attendance collection reference');
-                
-                const querySnapshot = await getDocs(attendanceRef);
-                logDebug('Got query snapshot', { empty: querySnapshot.empty, size: querySnapshot.size });
-
-                if (querySnapshot.empty) {
-                    logDebug('No employees found in attendance collection');
-                    showError('No employee records found. Please check database permissions.');
-                    return;
-                }
-
-                // Reset select element
-                employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
-                
-                // Add each employee to the select dropdown
-                querySnapshot.forEach(doc => {
-                    logDebug('Processing employee document', { id: doc.id });
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.id;
-                    employeeSelect.appendChild(option);
-                });
-
-                logDebug('Successfully populated employee list');
-            } catch (error) {
-                logDebug('Error fetching employee list', error);
-                showError(`Failed to fetch employee list: ${error.message}`);
-            }
-        }
-
-        // Handle Employee Selection
-        employeeSelect.addEventListener('change', async () => {
-            const selectedEmployee = employeeSelect.value;
-            if (!selectedEmployee) {
-                resetDashboard();
-                return;
-            }
-            
-            try {
-                logDebug('Fetching attendance data', { employee: selectedEmployee });
-                const year = new Date().getFullYear().toString();
-                const employeeYearRef = collection(db, 'attendance', selectedEmployee, year);
-                const querySnapshot = await getDocs(employeeYearRef);
-
-                let checkInCount = 0;
-                let lateCheckInCount = 0;
-                let salesMade = 0;
-                let patientsTalkedTo = 0;
-                let patientsClosed = 0;
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    logDebug('Processing attendance record', { id: doc.id, data });
-                    
-                    if (data.type === 'check-in') {
-                        checkInCount++;
-                        if (data.late) {
-                            lateCheckInCount++;
-                        }
-                    }
-                    if (data.salesMade) salesMade += data.salesMade;
-                    if (data.patientsTalkedTo) patientsTalkedTo += data.patientsTalkedTo;
-                    if (data.patientsClosed) patientsClosed += data.patientsClosed;
-                });
-
-                updateDashboard(selectedEmployee, {
-                    checkInCount,
-                    lateCheckInCount,
-                    salesMade,
-                    patientsTalkedTo,
-                    patientsClosed
-                });
-
-            } catch (error) {
-                logDebug('Error fetching attendance data', error);
-                showError(`Failed to fetch attendance data: ${error.message}`);
-            }
-        });
-
-        // Update Dashboard
-        function updateDashboard(employee, stats) {
-            const workingDays = calculateWorkingDays();
-            const attendancePercentage = ((stats.checkInCount / workingDays) * 100).toFixed(2);
-
-            // Update table
-            tableBody.innerHTML = `
-                <tr>
-                    <td>${employee}</td>
-                    <td>${stats.checkInCount}</td>
-                    <td>${stats.lateCheckInCount}</td>
-                    <td>${attendancePercentage}%</td>
-                    <td>${stats.salesMade}</td>
-                    <td>${stats.patientsTalkedTo}</td>
-                    <td>${stats.patientsClosed}</td>
-                </tr>
-            `;
-
-            // Update performance summary
-            performanceSummary.innerHTML = `
-                ${employee}'s Performance Summary:<br>
-                Attendance Rate: ${attendancePercentage}% | 
-                Total Check-ins: ${stats.checkInCount} | 
-                Late Check-ins: ${stats.lateCheckInCount}
-            `;
-
-            logDebug('Dashboard updated', { employee, stats });
-        }
-
-        // Calculate working days
-        function calculateWorkingDays() {
-            const year = new Date().getFullYear();
-            const month = new Date().getMonth();
-            const today = new Date().getDate();
-            let workingDays = 0;
-
-            for (let m = 0; m <= month; m++) {
-                const daysInMonth = new Date(year, m + 1, 0).getDate();
-                const lastDay = m === month ? today : daysInMonth;
-
-                for (let day = 1; day <= lastDay; day++) {
-                    const date = new Date(year, m, day);
-                    if (date.getDay() !== 0) { // Skip Sundays
-                        workingDays++;
-                    }
-                }
-            }
-            return workingDays;
-        }
     </script>
 </body>
 </html>

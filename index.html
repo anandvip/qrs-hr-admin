@@ -30,6 +30,13 @@
             margin-bottom: 20px;
         }
 
+        select {
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -70,6 +77,10 @@
         <h2>Employee Attendance and Performance Dashboard</h2>
         <button id="login-btn">Login with Google</button>
         <div id="dashboard" style="display: none;">
+            <select id="employee-select" onchange="fetchAttendanceData()">
+                <option value="">Select an Employee</option>
+                <!-- Employee options populated via JavaScript -->
+            </select>
             <table>
                 <thead>
                     <tr>
@@ -86,6 +97,7 @@
                     <!-- Populated via JavaScript -->
                 </tbody>
             </table>
+            <div id="performance-summary" style="margin-top: 20px; font-weight: bold;"></div>
         </div>
     </div>
 
@@ -140,53 +152,75 @@
         function displayDashboard() {
             document.getElementById('login-btn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            fetchAttendanceData();
+            fetchEmployeeList();
         }
 
-        // Fetch and display employee attendance and performance data
-        async function fetchAttendanceData() {
-            const tableBody = document.getElementById('attendance-table-body');
-            tableBody.innerHTML = '';
-
+        // Fetch and populate employee list in select dropdown
+        async function fetchEmployeeList() {
+            const employeeSelect = document.getElementById('employee-select');
+            employeeSelect.innerHTML = '<option value="">Select an Employee</option>';
             try {
                 const attendanceRef = collection(db, "attendance");
                 const querySnapshot = await getDocs(attendanceRef);
 
-                querySnapshot.forEach(async (employeeDoc) => {
-                    const employeeName = employeeDoc.id;
-                    const yearCollectionRef = collection(db, "attendance", employeeName, new Date().getFullYear().toString());
-                    const yearQuerySnapshot = await getDocs(yearCollectionRef);
-
-                    let checkInCount = 0;
-                    let lateCheckInCount = 0;
-                    let salesMade = 0; // Placeholder, fetch actual data from Firestore
-                    let patientsTalkedTo = 0; // Placeholder, fetch actual data from Firestore
-                    let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
-
-                    yearQuerySnapshot.forEach((doc) => {
-                        if (doc.data().type === 'check-in') {
-                            checkInCount++;
-                            if (doc.data().late) {
-                                lateCheckInCount++;
-                            }
-                        }
-                    });
-
-                    const attendancePercentage = ((checkInCount / TOTAL_WORKING_DAYS) * 100).toFixed(2);
-
-                    // Insert data into the table
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${employeeName}</td>
-                        <td>${checkInCount}</td>
-                        <td>${lateCheckInCount}</td>
-                        <td>${attendancePercentage}%</td>
-                        <td>${salesMade}</td>
-                        <td>${patientsTalkedTo}</td>
-                        <td>${patientsClosed}</td>
-                    `;
-                    tableBody.appendChild(row);
+                querySnapshot.forEach((employeeDoc) => {
+                    const option = document.createElement('option');
+                    option.value = employeeDoc.id;
+                    option.textContent = employeeDoc.id;
+                    employeeSelect.appendChild(option);
                 });
+            } catch (e) {
+                console.error("Error fetching employee list: ", e);
+            }
+        }
+
+        // Fetch and display employee attendance and performance data
+        async function fetchAttendanceData() {
+            const employeeSelect = document.getElementById('employee-select');
+            const selectedEmployee = employeeSelect.value;
+            const tableBody = document.getElementById('attendance-table-body');
+            const performanceSummary = document.getElementById('performance-summary');
+            tableBody.innerHTML = '';
+            performanceSummary.innerHTML = '';
+
+            if (!selectedEmployee) return;
+
+            try {
+                const yearCollectionRef = collection(db, "attendance", selectedEmployee, new Date().getFullYear().toString());
+                const yearQuerySnapshot = await getDocs(yearCollectionRef);
+
+                let checkInCount = 0;
+                let lateCheckInCount = 0;
+                let salesMade = 0; // Placeholder, fetch actual data from Firestore
+                let patientsTalkedTo = 0; // Placeholder, fetch actual data from Firestore
+                let patientsClosed = 0; // Placeholder, fetch actual data from Firestore
+
+                yearQuerySnapshot.forEach((doc) => {
+                    if (doc.data().type === 'check-in') {
+                        checkInCount++;
+                        if (doc.data().late) {
+                            lateCheckInCount++;
+                        }
+                    }
+                });
+
+                const attendancePercentage = ((checkInCount / TOTAL_WORKING_DAYS) * 100).toFixed(2);
+
+                // Insert data into the table
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${selectedEmployee}</td>
+                    <td>${checkInCount}</td>
+                    <td>${lateCheckInCount}</td>
+                    <td>${attendancePercentage}%</td>
+                    <td>${salesMade}</td>
+                    <td>${patientsTalkedTo}</td>
+                    <td>${patientsClosed}</td>
+                `;
+                tableBody.appendChild(row);
+
+                // Generate performance summary
+                performanceSummary.innerHTML = `${selectedEmployee} has an attendance percentage of ${attendancePercentage}%. Late Check-Ins: ${lateCheckInCount}. Keep an eye on punctuality and aim for improvement.`;
             } catch (e) {
                 console.error("Error fetching attendance data: ", e);
             }
